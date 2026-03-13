@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -7,18 +7,11 @@ import Dashboard from "./pages/Dashboard";
 import Builder from "./pages/Builder";
 import TemplatesPage from "./pages/TemplatesPage";
 import SettingsPage from "./pages/SettingsPage";
-import AuthCallback from "./pages/AuthCallback";
 import GitHubCallback from "./pages/GitHubCallback";
 import SharePage from "./pages/SharePage";
 import { Toaster } from "./components/ui/sonner";
 
 function AppRouter() {
-  const location = useLocation();
-  
-  if (location.hash?.includes('session_id=')) {
-    return <AuthCallback />;
-  }
-  
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />

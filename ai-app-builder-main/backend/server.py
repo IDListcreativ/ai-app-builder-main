@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Header, Cookie, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Header, Cookie, Response, Request
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -12,25 +12,77 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import bcrypt
 import requests
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from openai import AsyncOpenAI
 import json
 import asyncio
 from github import Github, GithubException
 import base64
 import secrets
 import string
+from pymongo import MongoClient
+from pymongo.errors import PyMongoError
+
+from local_store import LocalJSONDatabase
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+mongo_url = os.environ.get("MONGO_URL")
+db_name = os.environ.get("DB_NAME", "test_database")
+client = None
+
+
+def initialize_database():
+    global client
+
+    if mongo_url:
+        try:
+            probe_client = MongoClient(
+                mongo_url,
+                serverSelectionTimeoutMS=1500,
+                connectTimeoutMS=1500,
+            )
+            probe_client.admin.command("ping")
+            probe_client.close()
+            client = AsyncIOMotorClient(mongo_url)
+            logger.info("Using MongoDB backend for %s", db_name)
+            return client[db_name]
+        except PyMongoError as exc:
+            logger.warning("MongoDB is unavailable, using local JSON storage instead: %s", exc)
+
+    local_db_path = ROOT_DIR / "data" / f"{db_name}.json"
+    logger.info("Using local JSON backend at %s", local_db_path)
+    return LocalJSONDatabase(local_db_path)
+
+
+db = initialize_database()
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+OPENAI_MODEL_DEFAULT = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+PROJECT_URL = os.environ.get('PROJECT_URL', 'https://github.com/IDListcreativ/ai-app-builder')
+
+
+def resolve_openai_model(project: Dict[str, Any]) -> str:
+    model = project.get("llm_model") or OPENAI_MODEL_DEFAULT
+    provider = (project.get("llm_provider") or "openai").lower()
+
+    if provider != "openai":
+        return OPENAI_MODEL_DEFAULT
+
+    lowered = model.lower()
+    if "claude" in lowered or "gemini" in lowered:
+        return OPENAI_MODEL_DEFAULT
+
+    return model
 
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -102,6 +154,35 @@ class GenerateRequest(BaseModel):
     project_id: str
     prompt: str
 
+
+def is_secure_request(request: Request) -> bool:
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    scheme = forwarded_proto.split(",")[0].strip() if forwarded_proto else request.url.scheme
+    return scheme == "https"
+
+
+def set_session_cookie(response: Response, request: Request, session_token: str):
+    secure = is_secure_request(request)
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=secure,
+        samesite="none" if secure else "lax",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+
+
+def clear_session_cookie(response: Response, request: Request):
+    secure = is_secure_request(request)
+    response.delete_cookie(
+        key="session_token",
+        path="/",
+        secure=secure,
+        samesite="none" if secure else "lax",
+    )
+
 async def get_current_user(authorization: Optional[str] = Header(None), session_token: Optional[str] = Cookie(None)) -> User:
     token = None
     if session_token:
@@ -134,51 +215,13 @@ async def get_current_user(authorization: Optional[str] = Header(None), session_
     return User(**user_doc)
 
 @api_router.post("/auth/session")
-async def handle_oauth_session(x_session_id: str = Header(...)):
-    response = requests.get(
-        "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-        headers={"X-Session-ID": x_session_id}
+async def handle_oauth_session(x_session_id: Optional[str] = Header(None)):
+    raise HTTPException(
+        status_code=410,
+        detail="OAuth session exchange is disabled in self-hosted mode. Use email login instead.",
     )
-    
-    if response.status_code != 200:
-        raise HTTPException(status_code=400, detail="Invalid session ID")
-    
-    data = response.json()
-    user_id = f"user_{uuid.uuid4().hex[:12]}"
-    
-    existing_user = await db.users.find_one({"email": data["email"]}, {"_id": 0})
-    if existing_user:
-        user_id = existing_user["user_id"]
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {
-                "name": data.get("name", existing_user.get("name")),
-                "picture": data.get("picture", existing_user.get("picture"))
-            }}
-        )
-    else:
-        user_doc = {
-            "user_id": user_id,
-            "email": data["email"],
-            "name": data.get("name", ""),
-            "picture": data.get("picture"),
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.users.insert_one(user_doc)
-    
-    session_token = data["session_token"]
-    session_doc = {
-        "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.user_sessions.insert_one(session_doc)
-    
-    return {"session_token": session_token, "user_id": user_id}
-
 @api_router.post("/auth/register")
-async def register_email(data: EmailAuthRegister, response: Response):
+async def register_email(data: EmailAuthRegister, request: Request, response: Response):
     existing = await db.users.find_one({"email": data.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -204,21 +247,13 @@ async def register_email(data: EmailAuthRegister, response: Response):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.user_sessions.insert_one(session_doc)
-    
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7*24*60*60
-    )
+
+    set_session_cookie(response, request, session_token)
     
     return {"session_token": session_token, "user": {"user_id": user_id, "email": data.email, "name": data.name}}
 
 @api_router.post("/auth/login")
-async def login_email(data: EmailAuthLogin, response: Response):
+async def login_email(data: EmailAuthLogin, request: Request, response: Response):
     user_doc = await db.users.find_one({"email": data.email}, {"_id": 0})
     if not user_doc or "password_hash" not in user_doc:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -234,16 +269,8 @@ async def login_email(data: EmailAuthLogin, response: Response):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.user_sessions.insert_one(session_doc)
-    
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7*24*60*60
-    )
+
+    set_session_cookie(response, request, session_token)
     
     return {"session_token": session_token, "user": {"user_id": user_doc["user_id"], "email": user_doc["email"], "name": user_doc["name"]}}
 
@@ -253,12 +280,12 @@ async def get_me(authorization: Optional[str] = Header(None), session_token: Opt
     return user
 
 @api_router.post("/auth/logout")
-async def logout(response: Response, authorization: Optional[str] = Header(None), session_token: Optional[str] = Cookie(None)):
+async def logout(request: Request, response: Response, authorization: Optional[str] = Header(None), session_token: Optional[str] = Cookie(None)):
     token = session_token or (authorization.replace("Bearer ", "") if authorization else None)
     if token:
         await db.user_sessions.delete_many({"session_token": token})
-    
-    response.delete_cookie(key="session_token", path="/")
+
+    clear_session_cookie(response, request)
     return {"message": "Logged out"}
 
 @api_router.get("/projects", response_model=List[Project])
@@ -417,19 +444,30 @@ Generate complete, working code. Be comprehensive but concise."""
     full_prompt = f"{conversation_context}\n\nUSER: {data.prompt}\n\nRemember to respond with valid JSON containing the 'files' array."
     
     try:
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"project_{data.project_id}",
-            system_message=system_prompt
+        if not OPENAI_API_KEY:
+            raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured")
+
+        model = resolve_openai_model(project)
+        client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+        completion = await client.chat.completions.create(
+            model=model,
+            temperature=0.2,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": full_prompt},
+            ],
         )
-        
-        provider = project.get("llm_provider", "openai")
-        model = project.get("llm_model", "gpt-5.2")
-        chat.with_model(provider, model)
-        
-        user_msg = UserMessage(text=full_prompt)
-        response = await chat.send_message(user_msg)
-        
+
+        response = completion.choices[0].message.content or ""
+        if isinstance(response, list):
+            response = "".join(
+                part.get("text", "") if isinstance(part, dict) else str(part)
+                for part in response
+            )
+        response = response.strip()
+        if not response:
+            raise HTTPException(status_code=502, detail="OpenAI returned an empty response")
+
         assistant_message_id = f"msg_{uuid.uuid4().hex[:12]}"
         assistant_message_doc = {
             "message_id": assistant_message_id,
@@ -514,6 +552,8 @@ Generate complete, working code. Be comprehensive but concise."""
             "total_files": len(files_updated)
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"LLM generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
@@ -662,7 +702,7 @@ async def get_github_auth_url():
     if client_id == 'placeholder_client_id':
         raise HTTPException(status_code=500, detail="GitHub OAuth not configured. Please set GITHUB_CLIENT_ID in backend .env")
     
-    redirect_uri = "https://code-from-chat-1.preview.emergentagent.com/github/callback"
+    redirect_uri = os.environ.get('GITHUB_REDIRECT_URI', 'http://127.0.0.1:3000/github/callback')
     scope = "repo"
     
     auth_url = f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}"
@@ -784,7 +824,7 @@ This project contains {len(files)} files:
 
 ---
 
-**Built with ❤️ using [MetaBuilder](https://metabuilder.app)**
+**Built with ❤️ using [MetaBuilder]({PROJECT_URL})**
 """
         
         try:
@@ -1180,17 +1220,23 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=[
+        origin.strip()
+        for origin in os.environ.get('CORS_ORIGINS', 'http://127.0.0.1:3000,http://localhost:3000').split(',')
+        if origin.strip() and origin.strip() != '*'
+    ] or ["http://127.0.0.1:3000", "http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    if client is not None:
+        client.close()
+
+
+
+
+
+
+

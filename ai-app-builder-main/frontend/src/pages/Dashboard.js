@@ -207,22 +207,17 @@ const Dashboard = () => {
 
                 <div>
                   <Label htmlFor="llm-provider" className="text-zinc-300 mb-2 block">AI Provider</Label>
-                  <Select 
-                    value={newProject.llm_provider} 
-                    onValueChange={(value) => {
-                      let model = 'gpt-5.2';
-                      if (value === 'anthropic') model = 'claude-4-sonnet-20250514';
-                      if (value === 'gemini') model = 'gemini-2.5-pro';
-                      setNewProject({ ...newProject, llm_provider: value, llm_model: model });
-                    }}
+                  <Select
+                    value={newProject.llm_provider}
+                    onValueChange={(value) =>
+                      setNewProject({ ...newProject, llm_provider: value, llm_model: 'gpt-5.2' })
+                    }
                   >
                     <SelectTrigger className="bg-zinc-900 border-zinc-800" data-testid="llm-provider-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                      <SelectItem value="openai">OpenAI GPT-5.2</SelectItem>
-                      <SelectItem value="anthropic">Claude Sonnet 4</SelectItem>
-                      <SelectItem value="gemini">Gemini 2.5 Pro</SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -335,3 +330,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

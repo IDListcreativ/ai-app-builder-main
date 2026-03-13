@@ -2,6 +2,43 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API_URL = `${BACKEND_URL}/api`;
+const SESSION_TOKEN_KEY = 'metabuilder_session_token';
+
+const getStoredSessionToken = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage.getItem(SESSION_TOKEN_KEY);
+};
+
+const syncAuthHeader = (sessionToken) => {
+  if (sessionToken) {
+    const authorization = `Bearer ${sessionToken}`;
+    axios.defaults.headers.common.Authorization = authorization;
+    api.defaults.headers.common.Authorization = authorization;
+    return;
+  }
+
+  delete axios.defaults.headers.common.Authorization;
+  delete api.defaults.headers.common.Authorization;
+};
+
+const persistSessionToken = (sessionToken) => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(SESSION_TOKEN_KEY, sessionToken);
+  }
+
+  syncAuthHeader(sessionToken);
+};
+
+const clearSessionToken = () => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(SESSION_TOKEN_KEY);
+  }
+
+  syncAuthHeader(null);
+};
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -11,21 +48,23 @@ export const api = axios.create({
   },
 });
 
-export const authService = {
-  async handleOAuthSession(sessionId) {
-    const response = await api.post('/auth/session', null, {
-      headers: { 'x-session-id': sessionId },
-    });
-    return response.data;
-  },
+axios.defaults.withCredentials = true;
+syncAuthHeader(getStoredSessionToken());
 
+export const authService = {
   async register(email, password, name) {
     const response = await api.post('/auth/register', { email, password, name });
+    if (response.data?.session_token) {
+      persistSessionToken(response.data.session_token);
+    }
     return response.data;
   },
 
   async login(email, password) {
     const response = await api.post('/auth/login', { email, password });
+    if (response.data?.session_token) {
+      persistSessionToken(response.data.session_token);
+    }
     return response.data;
   },
 
@@ -35,8 +74,12 @@ export const authService = {
   },
 
   async logout() {
-    const response = await api.post('/auth/logout');
-    return response.data;
+    try {
+      const response = await api.post('/auth/logout');
+      return response.data;
+    } finally {
+      clearSessionToken();
+    }
   },
 };
 
