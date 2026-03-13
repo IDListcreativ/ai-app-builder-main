@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../lib/api';
 import { Button } from '../components/ui/button';
@@ -22,12 +22,7 @@ const SettingsPage = () => {
   const [vercelConnected, setVercelConnected] = useState(false);
   const [netlifyConnected, setNetlifyConnected] = useState(false);
 
-  useEffect(() => {
-    loadUser();
-    loadDeploymentSettings();
-  }, []);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       const userData = await authService.getMe();
       setUser(userData);
@@ -37,9 +32,9 @@ const SettingsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
-  const loadDeploymentSettings = async () => {
+  const loadDeploymentSettings = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/deployment/settings`, {
         withCredentials: true,
@@ -50,7 +45,12 @@ const SettingsPage = () => {
     } catch (error) {
       console.error('Failed to load deployment settings:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadUser();
+    loadDeploymentSettings();
+  }, [loadDeploymentSettings, loadUser]);
 
   const handleSaveVercel = async () => {
     if (!vercelToken.trim()) {

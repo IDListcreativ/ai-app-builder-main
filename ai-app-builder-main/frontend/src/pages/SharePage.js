@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -18,11 +18,7 @@ const SharePage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [activeTab, setActiveTab] = useState('preview');
 
-  useEffect(() => {
-    loadSharedProject();
-  }, [slug]);
-
-  const loadSharedProject = async () => {
+  const loadSharedProject = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/share/${slug}`);
       setProject(response.data);
@@ -40,7 +36,11 @@ const SharePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [slug]);
+
+  useEffect(() => {
+    loadSharedProject();
+  }, [loadSharedProject]);
 
   const handleCopyLink = () => {
     const url = window.location.href;

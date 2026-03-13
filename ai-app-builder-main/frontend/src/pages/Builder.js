@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectService, githubService } from '../lib/api';
 import { toast } from 'sonner';
@@ -47,18 +47,12 @@ const Builder = () => {
   const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
-    loadProjectData();
-    checkGitHubStatus();
-    checkDeploymentSettings();
-  }, [projectId]);
-
-  useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, generating]);
 
-  const checkDeploymentSettings = async () => {
+  const checkDeploymentSettings = useCallback(async () => {
     try {
       const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/deployment/settings`, {
         withCredentials: true,
@@ -68,18 +62,18 @@ const Builder = () => {
     } catch (error) {
       console.error('Failed to check deployment settings:', error);
     }
-  };
+  }, []);
 
-  const checkGitHubStatus = async () => {
+  const checkGitHubStatus = useCallback(async () => {
     try {
       const status = await githubService.getStatus();
       setGithubConnected(status.connected);
     } catch (error) {
       console.error('Failed to check GitHub status:', error);
     }
-  };
+  }, []);
 
-  const loadProjectData = async () => {
+  const loadProjectData = useCallback(async () => {
     try {
       const [projectData, messagesData, filesData] = await Promise.all([
         projectService.getProject(projectId),
@@ -101,7 +95,13 @@ const Builder = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, projectId]);
+
+  useEffect(() => {
+    loadProjectData();
+    checkGitHubStatus();
+    checkDeploymentSettings();
+  }, [checkDeploymentSettings, checkGitHubStatus, loadProjectData]);
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -303,7 +303,7 @@ const Builder = () => {
     }
   };
 
-  const generatePreviewHTML = () => {
+  const generatePreviewHTML = useCallback(() => {
     const appFile = files.find(f => f.path.includes('App.jsx') || f.path.includes('App.js'));
     const componentFiles = files.filter(f => f.path.includes('.jsx') || f.path.includes('.js'));
     
@@ -352,7 +352,7 @@ const Builder = () => {
     `;
     
     return html;
-  };
+  }, [files, project?.name]);
 
   useEffect(() => {
     if (files.length > 0 && iframeRef.current && activeTab === 'preview') {
@@ -360,7 +360,7 @@ const Builder = () => {
       const iframe = iframeRef.current;
       iframe.srcdoc = html;
     }
-  }, [files, activeTab, previewKey]);
+  }, [activeTab, files.length, generatePreviewHTML, previewKey]);
 
   if (loading) {
     return (
