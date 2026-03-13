@@ -1,0 +1,178 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "MetaBuilder",
+      "essence": "Cyber-Magic meets Silicon Valley Precision",
+      "core_values": ["Speed", "Power", "Simplicity", "Future-Ready"],
+      "aesthetic": "Dark Mode Linear-Style with Electric Purple Accents"
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Outfit, sans-serif",
+        "body": "Plus Jakarta Sans, sans-serif",
+        "code": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-5xl md:text-7xl font-bold tracking-tight leading-[1.1]",
+        "h2": "text-4xl md:text-5xl font-semibold tracking-tight",
+        "h3": "text-2xl md:text-3xl font-medium tracking-normal",
+        "body_lg": "text-lg leading-relaxed text-muted-foreground",
+        "body": "text-base leading-relaxed text-muted-foreground",
+        "caption": "text-sm text-muted-foreground/60 uppercase tracking-widest"
+      },
+      "imports": [
+        "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      ]
+    },
+    "colors": {
+      "theme": "dark_default_with_toggle",
+      "palette": {
+        "background": {
+          "default": "#0A0A0B",
+          "surface": "#18181B",
+          "surface_hover": "#27272A",
+          "glass": "rgba(10, 10, 11, 0.7)"
+        },
+        "foreground": {
+          "default": "#FAFAFA",
+          "muted": "#A1A1AA",
+          "inverse": "#09090B"
+        },
+        "primary": {
+          "main": "#7C3AED",
+          "hover": "#6D28D9",
+          "glow": "rgba(124, 58, 237, 0.5)"
+        },
+        "secondary": {
+          "main": "#27272A",
+          "hover": "#3F3F46"
+        },
+        "accent": {
+          "cyan": "#22D3EE",
+          "pink": "#F472B6",
+          "purple_gradient": "linear-gradient(135deg, #7C3AED 0%, #C026D3 100%)"
+        },
+        "border": {
+          "default": "#27272A",
+          "active": "#7C3AED",
+          "glass": "rgba(255, 255, 255, 0.08)"
+        },
+        "status": {
+          "success": "#10B981",
+          "error": "#EF4444",
+          "warning": "#F59E0B",
+          "info": "#3B82F6"
+        }
+      },
+      "gradients": {
+        "hero_glow": "radial-gradient(circle at center, rgba(124, 58, 237, 0.15) 0%, transparent 70%)",
+        "card_hover": "linear-gradient(180deg, rgba(39, 39, 42, 0) 0%, rgba(124, 58, 237, 0.05) 100%)",
+        "text_gradient": "linear-gradient(to right, #FFFFFF, #A1A1AA)"
+      }
+    },
+    "spacing": {
+      "container": {
+        "padding": "px-6 md:px-12 lg:px-24",
+        "max_width": "max-w-7xl mx-auto"
+      },
+      "section_gap": "gap-16 md:gap-32",
+      "component_gap": "gap-4 md:gap-8"
+    },
+    "shadows": {
+      "glow_sm": "0 0 10px rgba(124, 58, 237, 0.2)",
+      "glow_md": "0 0 20px rgba(124, 58, 237, 0.3)",
+      "glass": "0 8px 32px 0 rgba(0, 0, 0, 0.36)"
+    },
+    "border_radius": {
+      "base": "rounded-lg",
+      "lg": "rounded-xl",
+      "full": "rounded-full"
+    }
+  },
+  "ui_components": {
+    "buttons": {
+      "primary": "bg-white text-black hover:bg-gray-200 font-medium px-6 py-2 rounded-lg transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] active:scale-95",
+      "secondary": "bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600 px-6 py-2 rounded-lg transition-all active:scale-95",
+      "ghost": "bg-transparent text-zinc-400 hover:text-white hover:bg-zinc-800/50 px-4 py-2 rounded-lg transition-all",
+      "gradient": "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-0 hover:opacity-90 shadow-lg shadow-violet-500/20 px-6 py-2 rounded-lg transition-all hover:scale-[1.02]"
+    },
+    "cards": {
+      "base": "bg-zinc-900/50 backdrop-blur-md border border-zinc-800 rounded-xl p-6 hover:border-zinc-700 transition-colors duration-300",
+      "glass": "bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-2xl",
+      "feature": "group relative overflow-hidden bg-zinc-900 border border-zinc-800 rounded-xl p-8 hover:bg-zinc-800/80 transition-all duration-500"
+    },
+    "inputs": {
+      "default": "bg-zinc-950 border border-zinc-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 rounded-lg px-4 py-2 text-white placeholder:text-zinc-600 transition-all outline-none",
+      "chat": "bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 focus:border-violet-500/50 rounded-xl px-4 py-3 text-white placeholder:text-zinc-500 shadow-inner"
+    },
+    "navigation": {
+      "header": "fixed top-0 w-full z-50 bg-black/50 backdrop-blur-xl border-b border-white/5 h-16 flex items-center justify-between px-6",
+      "sidebar": "w-64 h-full border-r border-zinc-800 bg-zinc-950/90 flex flex-col"
+    }
+  },
+  "visual_enhancers": {
+    "tracing_beam": {
+      "description": "A glowing gradient line that traces the border of active cards or sections.",
+      "implementation": "Use framer-motion to animate a div along the SVG path of the container border."
+    },
+    "noise_texture": {
+      "css": "bg-[url('/noise.png')] opacity-[0.03] pointer-events-none fixed inset-0 z-[9999] mix-blend-overlay",
+      "instruction": "Add a subtle noise texture overlay to the entire app to prevent digital flatness."
+    },
+    "purple_haze": {
+      "description": "Subtle ambient radial gradients in the background to give depth.",
+      "css": "absolute top-[-20%] left-[20%] w-[500px] h-[500px] bg-violet-600/20 blur-[120px] rounded-full pointer-events-none"
+    }
+  },
+  "layout_strategies": {
+    "landing_page": {
+      "hero": "Centered high-impact text with 'Build Apps at the Speed of Thought' slogan. Background: Abstract 3D geometric shapes with purple glow.",
+      "features": "Bento Grid (Grid Cols 3). Large 'Live Preview' block (span 2), Small 'AI Chat' block (span 1), Tall 'Code Editor' block (row span 2).",
+      "testimonials": "Horizontal scrolling marquee of user avatars and clean text cards."
+    },
+    "app_builder": {
+      "layout": "Three-pane resizable: [Sidebar (Files) 20%] [Main (Code/Preview) 50%] [Right (Chat/Settings) 30%]. or Split view",
+      "mode": "Use 'Resizable' component from shadcn/ui."
+    }
+  },
+  "assets": {
+    "icons": "lucide-react",
+    "illustrations": {
+      "hero_bg": "https://images.unsplash.com/photo-1758979616631-d425001a1f2d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRhcmslMjBmdXR1cmlzdGljJTIwZGlnaXRhbCUyMGdlb21ldHJpYyUyMHNoYXBlcyUyMGdsb3dpbmclMjBwdXJwbGV8ZW58MHx8fHwxNzczMzU5NjM4fDA&ixlib=rb-4.1.0&q=85",
+      "feature_glow": "https://images.unsplash.com/photo-1762279388988-3f8abcc7dca2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHw0fHxhYnN0cmFjdCUyMGRhcmslMjBmdXR1cmlzdGljJTIwZGlnaXRhbCUyMGdlb21ldHJpYyUyMHNoYXBlcyUyMGdsb3dpbmclMjBwdXJwbGV8ZW58MHx8fHwxNzczMzU5NjM4fDA&ixlib=rb-4.1.0&q=85",
+      "avatars": [
+        "https://images.unsplash.com/photo-1624377103868-c780d0fa2b4c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBkaXZlcnNlJTIwdXNlciUyMGF2YXRhcnMlMjBwb3J0cmFpdHN8ZW58MHx8fHwxNzczMzU5NjM4fDA&ixlib=rb-4.1.0&q=85",
+        "https://images.unsplash.com/photo-1605504836193-e77d3d9ede8a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBkaXZlcnNlJTIwdXNlciUyMGF2YXRhcnMlMjBwb3J0cmFpdHN8ZW58MHx8fHwxNzczMzU5NjM4fDA&ixlib=rb-4.1.0&q=85",
+        "https://images.unsplash.com/photo-1665118440493-c25389dd1166?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTN8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBkaXZlcnNlJTIwdXNlciUyMGF2YXRhcnMlMjBwb3J0cmFpdHN8ZW58MHx8fHwxNzczMzU5NjM4fDA&ixlib=rb-4.1.0&q=85"
+      ]
+    }
+  },
+  "instructions_to_main_agent": [
+    "1. INSTALL FONTS: Add the Google Fonts import to public/index.html or the main CSS file immediately.",
+    "2. CONFIGURE TAILWIND: Update tailwind.config.js to include the 'Outfit' and 'Plus Jakarta Sans' font families and the custom colors (zinc, violet).",
+    "3. SHADCN OVERRIDE: When using Shadcn components, ALWAYS override the default 'border-border' with 'border-zinc-800' and 'bg-background' with 'bg-zinc-950' or 'bg-black' to ensure the dark theme is rich and not washed out.",
+    "4. GLASSMORPHISM: Use the 'glass' classes defined in UI components for all floating elements (modals, sticky headers, chat bubbles).",
+    "5. NO INTER: Do not use the Inter font. Use 'Outfit' for all headings and 'Plus Jakarta Sans' for body text.",
+    "6. USE SONNER: Use the 'sonner' library for all toast notifications. Do not use the default toast.",
+    "7. DATA-TESTID: Ensure every interactive element (button, input, link) has a data-testid attribute (e.g., 'submit-button', 'email-input').",
+    "8. MICRO-INTERACTIONS: Add 'active:scale-95' to all buttons and 'hover:text-white' to all muted links.",
+    "9. ICONS: Use 'lucide-react' for all system icons.",
+    "10. BENTO GRIDS: Use 'grid-cols-1 md:grid-cols-3' with 'row-span-2' classes for feature sections to create the bento look.",
+    "11. FILE STRUCTURE: Keep components in 'src/components/ui' but create domain-specific components in 'src/components/dashboard' or 'src/components/builder'.",
+    "12. THEME: Default to 'dark'. Add a 'light' toggle, but optimize primarily for dark mode perfection."
+  ],
+  "universal_guidelines": {
+    "design_philosophy": "Fusion over Imitation. Emotion First. Content is King.",
+    "anti_patterns": [
+      "No purple/teal CTAs (Use White/Black for primary actions).",
+      "No Inter font for headings.",
+      "No generic centered layouts (Use asymmetric grids).",
+      "No massive full-screen gradients (Use subtle glows)."
+    ],
+    "accessibility": {
+      "contrast": "Ensure text contrast is at least 4.5:1. Use lighter text (gray-200) on dark backgrounds, not gray-500.",
+      "focus_states": "Visible violet ring offset by 2px on focus.",
+      "reduced_motion": "Respect 'prefers-reduced-motion' media query."
+    }
+  }
+}
